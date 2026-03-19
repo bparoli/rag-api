@@ -18,10 +18,10 @@ class VectorStoreService:
             embedding_function=self.embed_fn,
         )
 
-    def add_chunks(self, chunks: List[str], doc_id: str) -> int:
+    def add_chunks(self, chunks: List[str], doc_id: str, filename: str = "") -> int:
         """Embed and store chunks. Returns number of chunks stored."""
         ids = [f"{doc_id}_{i}" for i in range(len(chunks))]
-        metadatas = [{"doc_id": doc_id, "chunk_index": i} for i in range(len(chunks))]
+        metadatas = [{"doc_id": doc_id, "chunk_index": i, "filename": filename} for i in range(len(chunks))]
         self.collection.add(documents=chunks, ids=ids, metadatas=metadatas)
         return len(chunks)
 
@@ -33,7 +33,23 @@ class VectorStoreService:
         )
         chunks = results["documents"][0]
         metadatas = results["metadatas"][0]
-        return [{"text": c, "metadata": m} for c, m in zip(chunks, metadatas)]
+        seen = set()
+        unique = []
+        for c, m in zip(chunks, metadatas):
+            if c not in seen:
+                seen.add(c)
+                unique.append({"text": c, "metadata": m})
+        return unique
+
+    def list_documents(self) -> List[Dict[str, Any]]:
+        """Return one entry per unique doc_id with its metadata."""
+        results = self.collection.get(include=["metadatas"])
+        seen = {}
+        for meta in results["metadatas"]:
+            doc_id = meta.get("doc_id")
+            if doc_id and doc_id not in seen:
+                seen[doc_id] = meta
+        return [{"doc_id": doc_id, "metadata": meta} for doc_id, meta in seen.items()]
 
     def delete_document(self, doc_id: str) -> None:
         """Remove all chunks belonging to a document."""

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG - Consulta de Documentos</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1e293b;
+      color: white;
+      padding: 16px 32px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 24px;
+      padding: 24px 32px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* ── Panel izquierdo ── */
+    .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+
+    .panel h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #334155;
+    }
+
+    .upload-area {
+      border: 2px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s;
+      margin-bottom: 16px;
+    }
+
+    .upload-area:hover, .upload-area.drag-over {
+      border-color: #6366f1;
+      background: #f5f3ff;
+    }
+
+    .upload-area input { display: none; }
+
+    .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+
+    .upload-area p { font-size: .875rem; color: #64748b; }
+
+    .btn {
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: .875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn:not(:disabled):hover { opacity: .85; }
+
+    .btn-primary { background: #6366f1; color: white; }
+    .btn-danger  { background: #ef4444; color: white; font-size: .75rem; padding: 4px 10px; width: auto; border-radius: 6px; }
+
+    #upload-status {
+      margin-top: 12px;
+      font-size: .8rem;
+      min-height: 20px;
+      color: #64748b;
+    }
+
+    #upload-status.success { color: #16a34a; }
+    #upload-status.error   { color: #dc2626; }
+
+    .doc-list { margin-top: 20px; }
+
+    .doc-list h3 { font-size: .875rem; font-weight: 600; color: #334155; margin-bottom: 10px; }
+
+    #documents { list-style: none; }
+
+    #documents li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: #f8fafc;
+      margin-bottom: 6px;
+      font-size: .8rem;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+
+    #documents li span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Panel derecho (chat) ── */
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #messages {
+      flex: 1;
+      min-height: 420px;
+      max-height: 520px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 4px 0;
+    }
+
+    .message {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: .875rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .message.user {
+      background: #6366f1;
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.assistant {
+      background: white;
+      color: #1a1a1a;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+
+    .message.assistant .sources {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #e2e8f0;
+      font-size: .75rem;
+      color: #64748b;
+    }
+
+    .message.assistant .sources strong { display: block; margin-bottom: 4px; }
+
+    .source-item {
+      background: #f8fafc;
+      border-left: 3px solid #6366f1;
+      padding: 4px 8px;
+      margin-bottom: 4px;
+      border-radius: 0 4px 4px 0;
+      font-size: .73rem;
+    }
+
+    .source-filename {
+      display: block;
+      font-weight: 600;
+      color: #6366f1;
+      margin-bottom: 2px;
+    }
+
+    .message.loading { color: #64748b; font-style: italic; }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    #question {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: .875rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    #question:focus { border-color: #6366f1; }
+
+    #ask-btn {
+      width: auto;
+      padding: 10px 24px;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #94a3b8;
+      font-size: .875rem;
+      margin: auto;
+      padding: 40px 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>RAG — Consulta de Documentos</header>
+
+<div class="container">
+
+  <!-- Panel Izquierdo: Upload + Lista -->
+  <aside class="panel">
+    <h2>Documentos</h2>
+
+    <div class="upload-area" id="drop-zone">
+      <input type="file" id="file-input" accept=".txt,.pdf" />
+      <div class="upload-icon">📄</div>
+      <p>Arrastra un archivo aquí<br/>o <strong>haz clic</strong> para seleccionar</p>
+      <p style="margin-top:6px; font-size:.75rem;">PDF o TXT</p>
+    </div>
+
+    <button class="btn btn-primary" id="upload-btn" disabled>Subir documento</button>
+    <div id="upload-status"></div>
+
+    <div class="doc-list">
+      <h3>Documentos cargados</h3>
+      <ul id="documents"><li style="color:#94a3b8; font-size:.8rem; border:none; background:none;">Ninguno aún</li></ul>
+    </div>
+  </aside>
+
+  <!-- Panel Derecho: Chat -->
+  <section class="panel chat-panel">
+    <h2>Hacer una pregunta</h2>
+
+    <div id="messages">
+      <div class="empty-state">Sube un documento y comienza a preguntar.</div>
+    </div>
+
+    <div class="input-row">
+      <input type="text" id="question" placeholder="Escribe tu pregunta aquí..." />
+      <button class="btn btn-primary" id="ask-btn">Preguntar</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const API = '/api/v1';
+
+  // ── Documentos ──
+  const docs = [];
+
+  async function loadDocuments() {
+    try {
+      const res = await fetch(`${API}/documents`);
+      if (!res.ok) return;
+      const data = await res.json();
+      docs.length = 0;
+      data.forEach(d => docs.push({
+        id: d.doc_id,
+        name: d.metadata?.filename || d.doc_id,
+      }));
+      renderDocs();
+    } catch (e) { /* silencioso */ }
+  }
+
+  loadDocuments();
+
+  // ── Elementos ──
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('file-input');
+  const uploadBtn  = document.getElementById('upload-btn');
+  const statusEl   = document.getElementById('upload-status');
+  const docsList   = document.getElementById('documents');
+  const messagesEl = document.getElementById('messages');
+  const questionEl = document.getElementById('question');
+  const askBtn     = document.getElementById('ask-btn');
+
+  let selectedFile = null;
+
+  // ── Upload area ──
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => {
+    selectedFile = fileInput.files[0] || null;
+    if (selectedFile) {
+      uploadBtn.disabled = false;
+      setStatus(`Archivo seleccionado: ${selectedFile.name}`, '');
+    }
+  });
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    selectedFile = e.dataTransfer.files[0] || null;
+    if (selectedFile) {
+      uploadBtn.disabled = false;
+      setStatus(`Archivo seleccionado: ${selectedFile.name}`, '');
+    }
+  });
+
+  // ── Upload ──
+  uploadBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    uploadBtn.disabled = true;
+    setStatus('Subiendo…', '');
+
+    const form = new FormData();
+    form.append('file', selectedFile);
+
+    try {
+      const res = await fetch(`${API}/ingest`, { method: 'POST', body: form });
+      if (!res.ok) {
+        const err = await res.json();
+        setStatus(`Error: ${err.detail}`, 'error');
+        return;
+      }
+      const data = await res.json();
+      setStatus(`✓ ${data.chunks_stored} fragmentos almacenados`, 'success');
+      docs.push({ id: data.doc_id, name: data.filename });
+      renderDocs();
+      selectedFile = null;
+      fileInput.value = '';
+    } catch (e) {
+      setStatus('Error de conexión', 'error');
+    } finally {
+      uploadBtn.disabled = true;
+    }
+  });
+
+  function setStatus(msg, cls) {
+    statusEl.textContent = msg;
+    statusEl.className = cls;
+  }
+
+  function renderDocs() {
+    if (docs.length === 0) {
+      docsList.innerHTML = '<li style="color:#94a3b8; font-size:.8rem; border:none; background:none;">Ninguno aún</li>';
+      return;
+    }
+    docsList.innerHTML = docs.map(d => `
+      <li>
+        <span title="${d.name}">📄 ${d.name}</span>
+        <button class="btn btn-danger" onclick="deleteDoc('${d.id}', '${d.name}')">✕</button>
+      </li>
+    `).join('');
+  }
+
+  async function deleteDoc(id, name) {
+    if (!confirm(`¿Eliminar "${name}"?`)) return;
+    try {
+      await fetch(`${API}/documents/${id}`, { method: 'DELETE' });
+      const idx = docs.findIndex(d => d.id === id);
+      if (idx !== -1) docs.splice(idx, 1);
+      renderDocs();
+    } catch (e) {
+      alert('Error al eliminar el documento.');
+    }
+  }
+
+  // ── Chat ──
+  askBtn.addEventListener('click', askQuestion);
+  questionEl.addEventListener('keydown', e => { if (e.key === 'Enter') askQuestion(); });
+
+  async function askQuestion() {
+    const q = questionEl.value.trim();
+    if (!q) return;
+
+    clearEmpty();
+    appendMessage(q, 'user');
+    questionEl.value = '';
+    askBtn.disabled = true;
+
+    const loadingEl = appendMessage('Pensando…', 'assistant loading');
+
+    try {
+      const res = await fetch(`${API}/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q }),
+      });
+
+      loadingEl.remove();
+
+      if (!res.ok) {
+        const err = await res.json();
+        appendMessage(`Error: ${err.detail}`, 'assistant');
+        return;
+      }
+
+      const data = await res.json();
+      appendAssistantMessage(data.answer, data.sources);
+    } catch (e) {
+      loadingEl.remove();
+      appendMessage('Error de conexión con la API.', 'assistant');
+    } finally {
+      askBtn.disabled = false;
+      questionEl.focus();
+    }
+  }
+
+  function clearEmpty() {
+    const empty = messagesEl.querySelector('.empty-state');
+    if (empty) empty.remove();
+  }
+
+  function appendMessage(text, cls) {
+    const el = document.createElement('div');
+    el.className = `message ${cls}`;
+    el.textContent = text;
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return el;
+  }
+
+  function appendAssistantMessage(answer, sources) {
+    const el = document.createElement('div');
+    el.className = 'message assistant';
+    el.textContent = answer;
+
+    if (sources && sources.length > 0) {
+      const srcDiv = document.createElement('div');
+      srcDiv.className = 'sources';
+      srcDiv.innerHTML = `<strong>Fuentes:</strong>` +
+        sources.map(s => {
+          const filename = s.metadata?.filename ? `<span class="source-filename">📄 ${s.metadata.filename}</span>` : '';
+          const text = s.text ? s.text.slice(0, 120) + '…' : '';
+          return `<div class="source-item">${filename}${text}</div>`;
+        }).join('');
+      el.appendChild(srcDiv);
+    }
+
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+</script>
+
+</body>
+</html>

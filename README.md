@@ -58,11 +58,33 @@ uvicorn app.main:app --reload
 
 API docs available at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
+Web UI available at: [http://localhost:8000](http://localhost:8000)
+
 ### Run with Docker
 
 ```bash
 docker-compose up --build
 ```
+
+---
+
+## Web UI
+
+The application includes a built-in web interface accessible at `http://localhost:8000`.
+
+### Features
+
+**Document management (left panel)**
+- Upload `.txt` or `.pdf` files via drag & drop or file picker
+- View all documents currently stored in the knowledge base
+- Delete individual documents from the vector store
+
+**Q&A chat (right panel)**
+- Ask questions in natural language
+- Answers are grounded exclusively in the uploaded documents
+- Each response includes the source fragments and the document they belong to, displayed separately from the answer
+
+No additional setup is required — the UI is served directly by FastAPI from the `frontend/` directory.
 
 ---
 
@@ -113,6 +135,26 @@ curl -X POST http://localhost:8000/api/v1/query \
 
 ---
 
+### `GET /api/v1/documents`
+
+List all documents stored in the knowledge base.
+
+```bash
+curl http://localhost:8000/api/v1/documents
+```
+
+**Response:**
+```json
+[
+  {
+    "doc_id": "3f7a1c2e-...",
+    "metadata": { "filename": "your_document.pdf", "chunk_index": 0 }
+  }
+]
+```
+
+---
+
 ### `DELETE /api/v1/documents/{doc_id}`
 
 Remove a document and all its chunks from the knowledge base.
@@ -144,7 +186,9 @@ rag-api/
 │   ├── services/
 │   │   ├── vector_store.py  # ChromaDB wrapper
 │   │   └── llm.py           # OpenAI completion with grounded prompting
-│   └── main.py              # FastAPI app, middleware, router
+│   └── main.py              # FastAPI app, middleware, router, static files
+├── frontend/
+│   └── index.html           # Web UI (vanilla HTML/CSS/JS, served by FastAPI)
 ├── tests/
 │   └── test_api.py          # Endpoint tests with mocked dependencies
 ├── infra/

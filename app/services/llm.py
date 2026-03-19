@@ -7,7 +7,7 @@ client = OpenAI(api_key=settings.openai_api_key)
 SYSTEM_PROMPT = """You are a precise and helpful assistant.
 Answer the user's question using ONLY the context provided below.
 If the answer is not in the context, say "I don't have enough information to answer that."
-Be concise, accurate, and cite which part of the context supports your answer."""
+Be concise and accurate. Do not reference or cite the sources in your answer — sources are shown separately to the user."""
 
 
 def build_context(chunks: List[Dict[str, Any]]) -> str:

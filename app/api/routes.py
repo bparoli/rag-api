@@ -45,7 +45,7 @@ async def ingest_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=422, detail="Could not extract text from document.")
 
     doc_id = str(uuid.uuid4())
-    stored = vector_store.add_chunks(chunks, doc_id)
+    stored = vector_store.add_chunks(chunks, doc_id, filename=file.filename)
 
     return IngestResponse(doc_id=doc_id, chunks_stored=stored, filename=file.filename)
 
@@ -65,6 +65,12 @@ def query(request: QueryRequest):
 
     answer = generate_answer(request.question, chunks)
     return QueryResponse(answer=answer, sources=chunks)
+
+
+@router.get("/documents", summary="List all documents")
+def list_documents():
+    """Return all documents stored in the vector database."""
+    return vector_store.list_documents()
 
 
 @router.delete("/documents/{doc_id}", summary="Delete a document")
