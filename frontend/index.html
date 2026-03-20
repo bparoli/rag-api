@@ -3,266 +3,659 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RAG - Consulta de Documentos</title>
+  <title>The Intelligent Archive</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: system-ui, -apple-system, sans-serif;
-      background: #f0f2f5;
-      color: #1a1a1a;
+      background: #EBEBF5;
+      color: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px;
+      min-height: 100vh;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      gap: 8px;
+      flex-shrink: 0;
+      border-right: 1px solid #EAEAF2;
+    }
+
+    .sidebar-brand {
+      font-size: .95rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      padding: 0 8px 16px;
+      border-bottom: 1px solid #EAEAF2;
+      margin-bottom: 8px;
+    }
+
+    .sidebar-project {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 8px;
+      margin-bottom: 8px;
+    }
+
+    .sidebar-project-icon {
+      width: 32px;
+      height: 32px;
+      background: #EEF0FD;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sidebar-project-name { font-size: .8rem; font-weight: 600; color: #1a1a2e; }
+    .sidebar-project-sub  { font-size: .7rem; color: #787588; text-transform: uppercase; letter-spacing: .5px; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      font-size: .85rem;
+      color: #787588;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      text-decoration: none;
+    }
+
+    .nav-item:hover { background: #F4F4FB; color: #1a1a2e; }
+    .nav-item.active { background: #EEF0FD; color: #6388F1; font-weight: 600; }
+
+    .nav-item svg { flex-shrink: 0; }
+
+    .sidebar-spacer { flex: 1; }
+
+    .sidebar-upload-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #6388F1;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background .15s;
+      margin-bottom: 16px;
+    }
+
+    .sidebar-upload-btn:hover { background: #4f6fd4; }
+
+    .sidebar-storage {
+      padding: 0 4px;
+    }
+
+    .sidebar-storage-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .72rem;
+      color: #787588;
+      margin-bottom: 6px;
+    }
+
+    .storage-bar {
+      height: 4px;
+      background: #EAEAF2;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .storage-bar-fill {
+      height: 100%;
+      width: 75%;
+      background: linear-gradient(90deg, #6388F1, #8D8C92);
+      border-radius: 4px;
+    }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       min-height: 100vh;
     }
 
-    header {
-      background: #1e293b;
-      color: white;
-      padding: 16px 32px;
-      font-size: 1.2rem;
-      font-weight: 600;
-      letter-spacing: 0.5px;
+    /* ── Top nav ── */
+    .topnav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 16px 28px 0;
+      border-bottom: 1px solid #DDDDE8;
+      background: #EBEBF5;
     }
 
-    .container {
+    .topnav-tab {
+      padding: 10px 18px;
+      font-size: .87rem;
+      color: #787588;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color .15s;
+    }
+
+    .topnav-tab.active {
+      color: #6388F1;
+      border-bottom-color: #6388F1;
+      font-weight: 600;
+    }
+
+    .topnav-tab:hover:not(.active) { color: #1a1a2e; }
+
+    /* ── Content ── */
+    .content {
+      flex: 1;
       display: grid;
-      grid-template-columns: 340px 1fr;
-      gap: 24px;
-      padding: 24px 32px;
-      max-width: 1200px;
-      margin: 0 auto;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      padding: 24px 28px;
     }
 
-    /* ── Panel izquierdo ── */
-    .panel {
+    /* ── Card ── */
+    .card {
       background: white;
-      border-radius: 12px;
+      border-radius: 16px;
       padding: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      box-shadow: 0 2px 8px rgba(99,136,241,.06);
     }
 
-    .panel h2 {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 16px;
-      color: #334155;
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 20px;
     }
 
+    /* ── Upload area ── */
     .upload-area {
-      border: 2px dashed #cbd5e1;
-      border-radius: 8px;
-      padding: 24px;
+      border: 2px dashed #C8CAE8;
+      border-radius: 12px;
+      padding: 28px 20px;
       text-align: center;
       cursor: pointer;
-      transition: border-color .2s;
+      transition: border-color .2s, background .2s;
       margin-bottom: 16px;
     }
 
     .upload-area:hover, .upload-area.drag-over {
-      border-color: #6366f1;
-      background: #f5f3ff;
+      border-color: #6388F1;
+      background: #F4F5FD;
     }
 
     .upload-area input { display: none; }
 
-    .upload-icon { font-size: 2rem; margin-bottom: 8px; }
-
-    .upload-area p { font-size: .875rem; color: #64748b; }
-
-    .btn {
-      width: 100%;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      font-size: .875rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity .15s;
+    .upload-circle {
+      width: 48px;
+      height: 48px;
+      background: #EEF0FD;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px;
     }
 
-    .btn:disabled { opacity: .5; cursor: not-allowed; }
-    .btn:not(:disabled):hover { opacity: .85; }
+    .upload-area p {
+      font-size: .82rem;
+      color: #787588;
+      line-height: 1.5;
+    }
 
-    .btn-primary { background: #6366f1; color: white; }
-    .btn-danger  { background: #ef4444; color: white; font-size: .75rem; padding: 4px 10px; width: auto; border-radius: 6px; }
+    .upload-area p strong { color: #1a1a2e; }
+    .upload-area p.upload-hint { font-size: .75rem; margin-top: 4px; color: #8D8C92; }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s, background .15s;
+    }
+
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn:not(:disabled):hover { opacity: .88; }
+
+    .btn-primary { background: #6388F1; color: white; width: 100%; }
+
+    .btn-icon-danger {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #C0C0CC;
+      padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      transition: color .15s, background .15s;
+    }
+
+    .btn-icon-danger:hover { color: #ef4444; background: #fff0f0; }
 
     #upload-status {
-      margin-top: 12px;
-      font-size: .8rem;
-      min-height: 20px;
-      color: #64748b;
+      margin-top: 10px;
+      font-size: .78rem;
+      min-height: 18px;
+      color: #787588;
     }
 
     #upload-status.success { color: #16a34a; }
     #upload-status.error   { color: #dc2626; }
 
-    .doc-list { margin-top: 20px; }
+    /* ── Doc list ── */
+    .doc-list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 20px 0 10px;
+    }
 
-    .doc-list h3 { font-size: .875rem; font-weight: 600; color: #334155; margin-bottom: 10px; }
+    .doc-list-header span {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      color: #787588;
+    }
+
+    .doc-list-header a {
+      font-size: .75rem;
+      color: #6388F1;
+      cursor: pointer;
+      text-decoration: none;
+    }
 
     #documents { list-style: none; }
 
     #documents li {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding: 8px 10px;
-      border-radius: 6px;
-      background: #f8fafc;
+      gap: 8px;
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: #F7F7FC;
       margin-bottom: 6px;
       font-size: .8rem;
-      color: #475569;
-      border: 1px solid #e2e8f0;
+      color: #4a4a6a;
+      border: 1px solid #EAEAF2;
     }
 
-    #documents li span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #documents li .doc-icon {
+      flex-shrink: 0;
+      color: #6388F1;
+    }
 
-    /* ── Panel derecho (chat) ── */
+    #documents li span.doc-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .doc-empty {
+      text-align: center;
+      padding: 20px 0;
+      color: #8D8C92;
+      font-size: .8rem;
+    }
+
+    .doc-empty svg { display: block; margin: 0 auto 8px; opacity: .4; }
+
+    /* ── Chat panel ── */
     .chat-panel {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      height: 100%;
+    }
+
+    .chat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .chat-badge {
+      background: #EEF0FD;
+      color: #6388F1;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .8px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
     }
 
     #messages {
       flex: 1;
-      min-height: 420px;
-      max-height: 520px;
+      min-height: 380px;
+      max-height: 460px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      padding: 4px 0;
+      gap: 14px;
+      padding: 4px 0 8px;
     }
 
     .message {
-      max-width: 85%;
+      max-width: 80%;
       padding: 12px 16px;
-      border-radius: 12px;
+      border-radius: 14px;
       font-size: .875rem;
-      line-height: 1.55;
+      line-height: 1.6;
       white-space: pre-wrap;
     }
 
     .message.user {
-      background: #6366f1;
+      background: #6388F1;
       color: white;
       align-self: flex-end;
       border-bottom-right-radius: 4px;
     }
 
     .message.assistant {
-      background: white;
-      color: #1a1a1a;
+      background: #F4F5FD;
+      color: #1a1a2e;
       align-self: flex-start;
       border-bottom-left-radius: 4px;
-      box-shadow: 0 1px 3px rgba(0,0,0,.08);
     }
 
     .message.assistant .sources {
       margin-top: 10px;
       padding-top: 10px;
-      border-top: 1px solid #e2e8f0;
+      border-top: 1px solid #DDDDE8;
       font-size: .75rem;
-      color: #64748b;
+      color: #787588;
     }
 
-    .message.assistant .sources strong { display: block; margin-bottom: 4px; }
+    .message.assistant .sources strong { display: block; margin-bottom: 6px; color: #4a4a6a; }
 
     .source-item {
-      background: #f8fafc;
-      border-left: 3px solid #6366f1;
-      padding: 4px 8px;
-      margin-bottom: 4px;
-      border-radius: 0 4px 4px 0;
+      background: white;
+      border-left: 3px solid #6388F1;
+      padding: 6px 10px;
+      margin-bottom: 5px;
+      border-radius: 0 8px 8px 0;
       font-size: .73rem;
     }
 
     .source-filename {
       display: block;
       font-weight: 600;
-      color: #6366f1;
+      color: #6388F1;
       margin-bottom: 2px;
     }
 
-    .message.loading { color: #64748b; font-style: italic; }
+    .message.loading { color: #787588; font-style: italic; background: #F4F5FD; }
 
-    .input-row {
-      display: flex;
-      gap: 10px;
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      margin: auto;
+      padding: 40px 20px;
     }
 
-    #question {
-      flex: 1;
+    .empty-state-icon {
+      width: 64px;
+      height: 64px;
+      background: #EEF0FD;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .empty-state h3 { font-size: 1rem; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+    .empty-state p  { font-size: .82rem; color: #787588; line-height: 1.55; max-width: 260px; margin: 0 auto; }
+
+    /* ── Input area ── */
+    .input-area {
+      margin-top: 16px;
+      border: 1.5px solid #DDDDE8;
+      border-radius: 14px;
+      background: #FAFAFA;
       padding: 12px 16px;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      font-size: .875rem;
-      outline: none;
       transition: border-color .2s;
     }
 
-    #question:focus { border-color: #6366f1; }
+    .input-area:focus-within { border-color: #6388F1; background: white; }
 
-    #ask-btn {
-      width: auto;
-      padding: 10px 24px;
+    #question {
+      width: 100%;
+      border: none;
+      background: none;
+      font-size: .875rem;
+      color: #1a1a2e;
+      outline: none;
+      resize: none;
+      min-height: 48px;
+      font-family: inherit;
+      line-height: 1.5;
     }
 
-    .empty-state {
+    #question::placeholder { color: #B0B0C0; }
+
+    .input-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .input-actions { display: flex; gap: 8px; }
+
+    .input-action-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #B0B0C0;
+      padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      transition: color .15s;
+    }
+
+    .input-action-btn:hover { color: #6388F1; }
+
+    #ask-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 20px;
+      width: auto;
+      font-size: .85rem;
+    }
+
+    .input-credit {
       text-align: center;
-      color: #94a3b8;
-      font-size: .875rem;
-      margin: auto;
-      padding: 40px 0;
+      font-size: .68rem;
+      color: #C0C0CC;
+      letter-spacing: .3px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-<header>RAG — Consulta de Documentos</header>
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="sidebar-brand">The Intelligent Archive</div>
 
-<div class="container">
-
-  <!-- Panel Izquierdo: Upload + Lista -->
-  <aside class="panel">
-    <h2>Documentos</h2>
-
-    <div class="upload-area" id="drop-zone">
-      <input type="file" id="file-input" accept=".txt,.pdf" />
-      <div class="upload-icon">📄</div>
-      <p>Arrastra un archivo aquí<br/>o <strong>haz clic</strong> para seleccionar</p>
-      <p style="margin-top:6px; font-size:.75rem;">PDF o TXT</p>
+  <div class="sidebar-project">
+    <div class="sidebar-project-icon">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#6388F1" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18"/>
+      </svg>
     </div>
-
-    <button class="btn btn-primary" id="upload-btn" disabled>Subir documento</button>
-    <div id="upload-status"></div>
-
-    <div class="doc-list">
-      <h3>Documentos cargados</h3>
-      <ul id="documents"><li style="color:#94a3b8; font-size:.8rem; border:none; background:none;">Ninguno aún</li></ul>
+    <div>
+      <div class="sidebar-project-name">Project Alpha</div>
+      <div class="sidebar-project-sub" id="doc-count">0 documentos</div>
     </div>
-  </aside>
+  </div>
 
-  <!-- Panel Derecho: Chat -->
-  <section class="panel chat-panel">
-    <h2>Hacer una pregunta</h2>
+  <a class="nav-item" href="#">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8 14H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v6a2 2 0 01-2 2h-3m-4 4v-8m0 8H9m3 0h3"/>
+    </svg>
+    Library
+  </a>
+  <a class="nav-item active" href="#">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    Recent
+  </a>
+  <a class="nav-item" href="#">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+    </svg>
+    Pinned
+  </a>
+  <a class="nav-item" href="#">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+    </svg>
+    Trash
+  </a>
 
-    <div id="messages">
-      <div class="empty-state">Sube un documento y comienza a preguntar.</div>
-    </div>
+  <div class="sidebar-spacer"></div>
 
-    <div class="input-row">
-      <input type="text" id="question" placeholder="Escribe tu pregunta aquí..." />
-      <button class="btn btn-primary" id="ask-btn">Preguntar</button>
-    </div>
-  </section>
+  <button class="sidebar-upload-btn" id="sidebar-upload-btn">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+    Upload Document
+  </button>
 
+  <div class="sidebar-storage">
+    <div class="sidebar-storage-label"><span>STORAGE</span><span>75%</span></div>
+    <div class="storage-bar"><div class="storage-bar-fill"></div></div>
+  </div>
+</nav>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- Top nav tabs -->
+  <div class="topnav">
+    <div class="topnav-tab active">Documents</div>
+    <div class="topnav-tab">Analysis</div>
+    <div class="topnav-tab">Settings</div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Left: Document panel -->
+    <aside class="card">
+      <div class="card-title">Documentos</div>
+
+      <div class="upload-area" id="drop-zone">
+        <input type="file" id="file-input" accept=".txt,.pdf" />
+        <div class="upload-circle">
+          <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#6388F1" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          </svg>
+        </div>
+        <p>Arrastra un archivo aquí o haz clic<br/>para seleccionar <strong>PDF o TXT</strong></p>
+        <p class="upload-hint">Máximo 25MB por archivo</p>
+      </div>
+
+      <button class="btn btn-primary" id="upload-btn" disabled>Subir documento</button>
+      <div id="upload-status"></div>
+
+      <div class="doc-list-header">
+        <span>Documentos cargados</span>
+        <a>Ver todos</a>
+      </div>
+
+      <ul id="documents">
+        <li class="doc-empty" style="border:none; background:none; display:block;">
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="#B0B0C0" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Ninguno aún
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Right: Chat panel -->
+    <section class="card chat-panel">
+      <div class="chat-header">
+        <div class="card-title" style="margin-bottom:0">Hacer una pregunta</div>
+        <span class="chat-badge">AI Assistant v2.4</span>
+      </div>
+
+      <div id="messages">
+        <div class="empty-state">
+          <div class="empty-state-icon">
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#6388F1" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+            </svg>
+          </div>
+          <h3>Sube un documento y comienza a preguntar.</h3>
+          <p>Analiza contratos, reportes técnicos o transcripciones legales con precisión editorial y contexto completo.</p>
+        </div>
+      </div>
+
+      <div class="input-area">
+        <textarea id="question" placeholder="Escribe tu pregunta aquí..." rows="2"></textarea>
+        <div class="input-footer">
+          <div class="input-actions">
+            <button class="input-action-btn" title="Adjuntar archivo">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+              </svg>
+            </button>
+            <button class="input-action-btn" title="Idioma">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+              </svg>
+            </button>
+            <button class="input-action-btn" title="Historial">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </button>
+          </div>
+          <button class="btn btn-primary" id="ask-btn">
+            Preguntar
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="input-credit">POTENCIADO POR EL MOTOR DE ANÁLISIS RAG DE THE INTELLIGENT ARCHIVE</div>
+    </section>
+
+  </div>
 </div>
 
 <script>
   const API = '/api/v1';
-
-  // ── Documentos ──
   const docs = [];
 
   async function loadDocuments() {
@@ -271,17 +664,13 @@
       if (!res.ok) return;
       const data = await res.json();
       docs.length = 0;
-      data.forEach(d => docs.push({
-        id: d.doc_id,
-        name: d.metadata?.filename || d.doc_id,
-      }));
+      data.forEach(d => docs.push({ id: d.doc_id, name: d.metadata?.filename || d.doc_id }));
       renderDocs();
     } catch (e) { /* silencioso */ }
   }
 
   loadDocuments();
 
-  // ── Elementos ──
   const dropZone   = document.getElementById('drop-zone');
   const fileInput  = document.getElementById('file-input');
   const uploadBtn  = document.getElementById('upload-btn');
@@ -290,10 +679,13 @@
   const messagesEl = document.getElementById('messages');
   const questionEl = document.getElementById('question');
   const askBtn     = document.getElementById('ask-btn');
+  const docCount   = document.getElementById('doc-count');
 
   let selectedFile = null;
 
-  // ── Upload area ──
+  // Sidebar upload button triggers the drop zone click
+  document.getElementById('sidebar-upload-btn').addEventListener('click', () => fileInput.click());
+
   dropZone.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', () => {
@@ -316,16 +708,12 @@
     }
   });
 
-  // ── Upload ──
   uploadBtn.addEventListener('click', async () => {
     if (!selectedFile) return;
-
     uploadBtn.disabled = true;
     setStatus('Subiendo…', '');
-
     const form = new FormData();
     form.append('file', selectedFile);
-
     try {
       const res = await fetch(`${API}/ingest`, { method: 'POST', body: form });
       if (!res.ok) {
@@ -352,14 +740,28 @@
   }
 
   function renderDocs() {
+    docCount.textContent = `${docs.length} DOCUMENTO${docs.length !== 1 ? 'S' : ''}`;
     if (docs.length === 0) {
-      docsList.innerHTML = '<li style="color:#94a3b8; font-size:.8rem; border:none; background:none;">Ninguno aún</li>';
+      docsList.innerHTML = `
+        <li class="doc-empty" style="border:none; background:none; display:block;">
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="#B0B0C0" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Ninguno aún
+        </li>`;
       return;
     }
     docsList.innerHTML = docs.map(d => `
       <li>
-        <span title="${d.name}">📄 ${d.name}</span>
-        <button class="btn btn-danger" onclick="deleteDoc('${d.id}', '${d.name}')">✕</button>
+        <svg class="doc-icon" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <span class="doc-name" title="${d.name}">${d.name}</span>
+        <button class="btn-icon-danger" onclick="deleteDoc('${d.id}', '${d.name}')" title="Eliminar">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
       </li>
     `).join('');
   }
@@ -376,36 +778,29 @@
     }
   }
 
-  // ── Chat ──
   askBtn.addEventListener('click', askQuestion);
-  questionEl.addEventListener('keydown', e => { if (e.key === 'Enter') askQuestion(); });
+  questionEl.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askQuestion(); } });
 
   async function askQuestion() {
     const q = questionEl.value.trim();
     if (!q) return;
-
     clearEmpty();
     appendMessage(q, 'user');
     questionEl.value = '';
     askBtn.disabled = true;
-
     const loadingEl = appendMessage('Pensando…', 'assistant loading');
-
     try {
       const res = await fetch(`${API}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q }),
       });
-
       loadingEl.remove();
-
       if (!res.ok) {
         const err = await res.json();
         appendMessage(`Error: ${err.detail}`, 'assistant');
         return;
       }
-
       const data = await res.json();
       appendAssistantMessage(data.answer, data.sources);
     } catch (e) {
@@ -435,7 +830,6 @@
     const el = document.createElement('div');
     el.className = 'message assistant';
     el.textContent = answer;
-
     if (sources && sources.length > 0) {
       const srcDiv = document.createElement('div');
       srcDiv.className = 'sources';
@@ -447,7 +841,6 @@
         }).join('');
       el.appendChild(srcDiv);
     }
-
     messagesEl.appendChild(el);
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
