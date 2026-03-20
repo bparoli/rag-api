@@ -7,10 +7,8 @@ from app.core.config import settings
 class VectorStoreService:
     def __init__(self):
         self.client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
-        import os
-        os.environ.setdefault("CHROMA_OPENAI_API_KEY", settings.openai_api_key)
         self.embed_fn = embedding_functions.OpenAIEmbeddingFunction(
-            api_key_env_var="CHROMA_OPENAI_API_KEY",
+            api_key=settings.openai_api_key,
             model_name=settings.embedding_model,
         )
         self.collection = self.client.get_or_create_collection(

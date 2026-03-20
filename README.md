@@ -192,7 +192,8 @@ rag-api/
 ├── tests/
 │   └── test_api.py          # Endpoint tests with mocked dependencies
 ├── infra/
-│   └── AWS_ARCHITECTURE.md  # Production AWS deployment reference
+│   ├── AWS_ARCHITECTURE.md  # Production AWS deployment reference
+│   └── terraform/           # Infrastructure as code (VPC, ECS, ALB, EFS, ECR...)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -216,7 +217,109 @@ RAG answers should be grounded and deterministic. Low temperature reduces creati
 
 ## AWS Production Deployment
 
-See [`infra/AWS_ARCHITECTURE.md`](infra/AWS_ARCHITECTURE.md) for the full reference architecture using ECS Fargate, API Gateway, OpenSearch, and Secrets Manager.
+The MVP infrastructure runs on **ECS Fargate + ALB + EFS**, provisioned with Terraform. ChromaDB data is persisted on EFS across container restarts.
+
+### Infrastructure overview
+
+| Service | Role |
+|---|---|
+| ECS Fargate | Serverless container hosting |
+| Application Load Balancer | Public entry point (port 80) |
+| ECR | Docker image registry |
+| EFS | Persistent storage for ChromaDB |
+| Secrets Manager | OpenAI API key |
+| CloudWatch | Container logs |
+
+### Prerequisites
+
+- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) configured (`aws configure`)
+- [Docker](https://www.docker.com/) with BuildKit support
+
+### 1. Provision the infrastructure
+
+```bash
+cd infra/terraform
+
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars — set your openai_api_key and aws_region
+
+terraform init
+terraform plan
+terraform apply
+```
+
+After apply, note the outputs:
+
+```bash
+terraform output ecr_repository_url   # e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com/rag-api
+terraform output alb_dns_name         # e.g. rag-api-alb-xxxxx.us-east-1.elb.amazonaws.com
+```
+
+### 2. Build and push the Docker image
+
+```bash
+# Set your values
+ECR_URL=$(terraform -chdir=infra/terraform output -raw ecr_repository_url)
+AWS_REGION=us-east-1  # must match terraform.tfvars
+
+# Authenticate Docker with ECR
+aws ecr get-login-password --region $AWS_REGION | \
+  docker login --username AWS --password-stdin $ECR_URL
+
+# Build for linux/amd64 (required for Fargate)
+docker build --platform linux/amd64 -t rag-api .
+
+# Tag and push
+docker tag rag-api:latest $ECR_URL:latest
+docker push $ECR_URL:latest
+```
+
+### 3. Deploy
+
+Force ECS to pull the new image:
+
+```bash
+aws ecs update-service \
+  --cluster rag-api-cluster \
+  --service rag-api-service \
+  --force-new-deployment \
+  --region $AWS_REGION
+```
+
+The service will be available at the ALB DNS name in ~1-2 minutes.
+
+### Redeploying after code changes
+
+Repeat steps 2 and 3 on every new release:
+
+```bash
+docker build --platform linux/amd64 -t rag-api .
+docker tag rag-api:latest $ECR_URL:latest
+docker push $ECR_URL:latest
+
+aws ecs update-service \
+  --cluster rag-api-cluster \
+  --service rag-api-service \
+  --force-new-deployment
+```
+
+### Monitoring logs
+
+```bash
+aws logs tail /ecs/rag-api --follow
+```
+
+### Teardown
+
+```bash
+cd infra/terraform
+terraform destroy
+```
+
+> **Note:** `terraform destroy` does not delete the ECR images. Run `aws ecr batch-delete-image` first if you want a full cleanup.
+
+See [`infra/AWS_ARCHITECTURE.md`](infra/AWS_ARCHITECTURE.md) for the full reference architecture including future additions (API Gateway, OpenSearch, Route 53).
 
 ---
 
