@@ -4,3 +4,5 @@ terraform.tfstate.backup
 terraform.tfvars
 *.tfvars
 !terraform.tfvars.example
+backend.hcl
+!backend.hcl.example

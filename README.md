@@ -244,7 +244,10 @@ cd infra/terraform
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars — set your openai_api_key and aws_region
 
-terraform init
+cp backend.hcl.example backend.hcl
+# Edit backend.hcl — set your S3 bucket name for remote state
+
+terraform init -backend-config=backend.hcl
 terraform plan
 terraform apply
 ```

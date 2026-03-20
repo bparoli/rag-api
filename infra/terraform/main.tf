@@ -8,12 +8,9 @@ terraform {
     }
   }
 
-  # Uncomment to use S3 as remote backend
-  # backend "s3" {
-  #   bucket = "your-terraform-state-bucket"
-  #   key    = "rag-api/terraform.tfstate"
-  #   region = var.aws_region
-  # }
+  # Backend configured via backend.hcl (not committed to repo)
+  # Run: terraform init -backend-config=backend.hcl
+  backend "s3" {}
 }
 
 provider "aws" {
