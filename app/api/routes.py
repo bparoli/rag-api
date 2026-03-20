@@ -64,7 +64,8 @@ def query(request: QueryRequest):
         raise HTTPException(status_code=404, detail="No relevant documents found.")
 
     answer = generate_answer(request.question, chunks)
-    return QueryResponse(answer=answer, sources=chunks)
+    no_info = "i don't have enough information" in answer.lower()
+    return QueryResponse(answer=answer, sources=[] if no_info else chunks)
 
 
 @router.get("/documents", summary="List all documents")
