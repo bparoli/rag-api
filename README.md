@@ -290,7 +290,13 @@ aws ecs update-service \
   --region $AWS_REGION
 ```
 
-The service will be available at the ALB DNS name in ~1-2 minutes.
+The service will be available in ~1-2 minutes. To get the URL:
+
+```bash
+terraform output alb_dns_name
+```
+
+Access the web UI at `http://<alb_dns_name>` and the API docs at `http://<alb_dns_name>/docs`.
 
 ### Redeploying after code changes
 
